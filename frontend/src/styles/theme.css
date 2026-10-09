@@ -1,0 +1,115 @@
+:root {
+    --color-sidebar-bg: #0f172a;
+    --color-sidebar-hover: #1e293b;
+    --color-sidebar-active: #1e3a8a;
+    --color-sidebar-text: #cbd5e1;
+    --color-primary: #1e3a8a;
+    --color-primary-hover: #1e40af;
+    --color-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-border: #e2e8f0;
+    --color-text: #0f172a;
+    --color-text-muted: #64748b;
+    --color-active-bg: #dcfce7;
+    --color-active-text: #166534;
+    --color-active-dot: #22c55e;
+    --color-blocked-bg: #fee2e2;
+    --color-blocked-text: #991b1b;
+    --color-blocked-dot: #ef4444;
+    --color-inactive-bg: #f1f5f9;
+    --color-inactive-text: #475569;
+    --color-inactive-dot: #94a3b8;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.07);
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    --font-size-xs: 12px;
+    --font-size-sm: 13px;
+    --font-size-base: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 20px;
+    --font-size-2xl: 28px;
+}
+html, body, #root {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    border: none;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--color-text);
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.status-chip--active {
+    background-color: var(--color-active-bg);
+    color: var(--color-active-text);
+}
+
+.status-chip--blocked {
+    background-color: var(--color-blocked-bg);
+    color: var(--color-blocked-text);
+}
+
+.status-chip--inactive {
+    background-color: var(--color-inactive-bg);
+    color: var(--color-inactive-text);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot--active {
+    background-color: var(--color-active-dot);
+}
+
+.status-dot--blocked {
+    background-color: var(--color-blocked-dot);
+}
+
+.status-dot--inactive {
+    background-color: var(--color-inactive-dot);
+}
