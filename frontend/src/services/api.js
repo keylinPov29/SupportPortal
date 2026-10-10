@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5043';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export async function searchClients(document) {
     const term = (document || '').trim();
