@@ -8,26 +8,37 @@ Built as part of the **DTP-L1-2026** technical challenge — Level 1.
 
 ---
 
+## 🚀 Live Demo
+
+- **Application:** https://supportportal1.up.railway.app
+- **API Docs (Swagger):** https://supportportal1.up.railway.app/swagger
+
+> Single URL serves both the React frontend and the .NET API.
+
+---
+
 ## Tech Stack
 
-| Layer       | Technology                |
-|-------------|---------------------------|
-| Frontend    | React 18 + Vite           |
-| Backend     | .NET 8 (C#) Web API       |
-| Database    | SQL Server                |
-| Deployment  | Railway (API) + Vercel (UI) |
+| Layer       | Technology                          |
+|-------------|-------------------------------------|
+| Frontend    | React 18 + Vite                     |
+| Backend     | .NET 8 (C#) Web API                 |
+| Database    | MySQL 8                             |
+| Deployment  | Railway (single unified service via Docker) |
 
 ### Why this stack?
 
 - **.NET Web API**: strong typing, built-in dependency injection, and clean
   separation between controllers, services, and repositories.
-- **SQL Server + Stored Procedures**: business rules (status validation and
+- **MySQL + Stored Procedures**: business rules (status validation and
   mandatory reason when blocking) are enforced at the database level,
   guaranteeing data integrity regardless of the entry point.
 - **React + Vite**: fast dev server with hot module replacement, simple
   component-based architecture, and easy deployment.
 - **Dapper**: lightweight micro-ORM that keeps stored procedure calls clean
   and explicit.
+- **Single Docker image**: React is built and served as static files from the
+  .NET `wwwroot`, so the app exposes **one public URL** with no CORS issues.
 
 ---
 
@@ -35,6 +46,8 @@ Built as part of the **DTP-L1-2026** technical challenge — Level 1.
 
 ```
 SupportPortal/
+├── Dockerfile                     # Multi-stage build (React + .NET)
+├── .dockerignore
 ├── SupportPortal/                 # .NET 8 Web API (backend)
 │   ├── Controllers/               # API endpoints (thin layer)
 │   ├── Services/                  # Business logic
@@ -55,7 +68,6 @@ SupportPortal/
 │   │   └── main.jsx
 │   └── package.json
 │
-├── SupportPortal.slnx
 └── .gitignore
 ```
 
@@ -69,33 +81,33 @@ The system uses three relational tables.
 
 | Field           | Type         | Constraints           |
 |-----------------|--------------|-----------------------|
-| id              | INT          | PK, IDENTITY          |
+| id              | INT          | PK, AUTO_INCREMENT    |
 | document_number | VARCHAR(20)  | UNIQUE, NOT NULL      |
 | business_name   | VARCHAR(200) | NOT NULL              |
-| created_at      | DATETIME     | DEFAULT GETDATE()     |
+| created_at      | DATETIME     | DEFAULT UTC_TIMESTAMP() |
 
 ### Account
 
 | Field          | Type         | Constraints                    |
 |----------------|--------------|--------------------------------|
-| id             | INT          | PK, IDENTITY                   |
+| id             | INT          | PK, AUTO_INCREMENT             |
 | client_id      | INT          | FK → Client.id, NOT NULL       |
 | account_number | VARCHAR(20)  | UNIQUE, NOT NULL               |
 | status         | VARCHAR(20)  | NOT NULL, DEFAULT 'ACTIVE'     |
 | status_reason  | VARCHAR(500) | NULL (mandatory when BLOCKED)  |
-| updated_at     | DATETIME     | DEFAULT GETDATE()              |
+| updated_at     | DATETIME     | DEFAULT UTC_TIMESTAMP()        |
 
 ### AccountDetail (audit trail)
 
 | Field          | Type         | Constraints                    |
 |----------------|--------------|--------------------------------|
-| id             | INT          | PK, IDENTITY                   |
+| id             | INT          | PK, AUTO_INCREMENT             |
 | account_id     | INT          | FK → Account.id, NOT NULL      |
 | old_status     | VARCHAR(20)  | NULL                           |
 | new_status     | VARCHAR(20)  | NOT NULL                       |
 | status_reason  | VARCHAR(500) | NULL                           |
 | changed_by     | VARCHAR(100) | NULL                           |
-| changed_at     | DATETIME     | DEFAULT GETDATE()              |
+| changed_at     | DATETIME     | DEFAULT UTC_TIMESTAMP()        |
 
 ### Relationships
 
@@ -113,7 +125,7 @@ The system uses three relational tables.
 5. The business rule is enforced at **three levels**:
    - **Frontend**: the modal disables "Save" until a reason is provided.
    - **Service layer**: throws `ArgumentException` if the rule is violated.
-   - **Stored procedure**: uses `RAISERROR` as the last line of defense.
+   - **Stored procedure**: uses `SIGNAL SQLSTATE '45000'` as the last line of defense.
 
 ---
 
@@ -204,7 +216,7 @@ GET /api/accounts/{id}/history
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - [Node.js 18+](https://nodejs.org)
-- SQL Server (local or Docker)
+- MySQL 8 (local or Docker)
 
 ### 1. Clone the repository
 
@@ -215,11 +227,11 @@ cd SupportPortal
 
 ### 2. Set up the database
 
-Open SQL Server Management Studio and run, in order:
+Execute the scripts against your MySQL instance:
 
-```
-SupportPortal/database/schema.sql
-SupportPortal/database/stored-procedures.sql
+```bash
+mysql -u root -p < SupportPortal/database/schema.sql
+mysql -u root -p < SupportPortal/database/stored-procedures.sql
 ```
 
 ### 3. Configure the backend connection string
@@ -229,7 +241,7 @@ Edit `SupportPortal/appsettings.json`:
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=SupportPortalDb;User Id=sa;Password=YourPassword;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=localhost;Port=3306;Database=supportportaldb;User=root;Password=root"
   }
 }
 ```
@@ -265,18 +277,41 @@ The frontend will be available at `http://localhost:5173`.
 
 ---
 
-## Deployment
+## Deployment (Railway)
 
-- **Backend API**: (pending deployment — Railway)
-- **Frontend**: (pending deployment — Vercel)
+The application is deployed as **a single Docker service** on Railway, exposing
+one public URL for both the React frontend and the .NET API.
 
-### Local development URLs
+### How the Dockerfile works
 
-- **API (local)**: http://localhost:5043/swagger
-- **Frontend (local)**: http://localhost:5173
+Multi-stage build:
 
-Environment variables are configured in the hosting dashboard —
-no secrets are committed to the repository.
+1. **Stage 1 — Frontend build (`node:20-alpine`)**
+   Runs `npm install && npm run build` inside `frontend/`, producing `dist/`.
+
+2. **Stage 2 — Backend build (`dotnet/sdk:8.0`)**
+   - Restores and builds the .NET API.
+   - Copies the React `dist/` into the API's `wwwroot/`.
+   - Publishes the release build.
+
+3. **Stage 3 — Runtime (`dotnet/aspnet:8.0`)**
+   Runs the published app. Listens on `http://+:8080`.
+
+`Program.cs` is configured to:
+- Serve static files from `wwwroot`.
+- Fallback to `index.html` for client-side routes (React Router).
+
+### Environment variables on Railway
+
+| Variable | Value |
+|----------|-------|
+| `ConnectionStrings__DefaultConnection` | MySQL connection string (Railway MySQL service) |
+| `ASPNETCORE_URLS` | `http://+:8080` (set automatically by Dockerfile) |
+
+### Public URLs
+
+- **App:** https://supportportal1.up.railway.app
+- **Swagger:** https://supportportal1.up.railway.app/swagger
 
 ---
 
@@ -290,6 +325,11 @@ no secrets are committed to the repository.
 - **DTOs**: separate API contracts from database entities.
 - **Dapper**: minimal overhead and full control over SQL.
 - **Audit trail**: every status change is recorded in `AccountDetail`.
+- **UTC timestamps**: all dates are stored as UTC (`UTC_TIMESTAMP()` in MySQL),
+  marked as UTC in the backend (`DateTime.SpecifyKind`), and serialized with
+  the `Z` suffix so the frontend can display accurate relative times.
+- **Single-service deployment**: one Docker image serves both frontend and
+  backend to avoid CORS complexity and reduce deployment overhead.
 - **English First**: code, commits, and documentation are in English.
 
 ---
