@@ -1,19 +1,28 @@
--- =============================================
--- Database: SupportPortalDb
--- Stored Procedures
--- =============================================
-
 USE SupportPortalDb;
-GO
 
--- ---------- sp_search_clients ----------
-CREATE OR ALTER PROCEDURE sp_search_clients
-    @document_number VARCHAR(20)
-AS
+-- ============================================
+-- Drop procedures if they exist
+-- ============================================
+DROP PROCEDURE IF EXISTS sp_search_clients;
+DROP PROCEDURE IF EXISTS sp_update_account_status;
+DROP PROCEDURE IF EXISTS sp_get_account_status_history;
+
+-- ============================================
+-- sp_search_clients
+-- Same behavior as SQL Server version
+-- ============================================
+DELIMITER //
+CREATE PROCEDURE sp_search_clients(IN p_search_term VARCHAR(100))
 BEGIN
-    SET NOCOUNT ON;
+    DECLARE v_pattern VARCHAR(102);
 
-    SELECT 
+    IF p_search_term IS NULL OR TRIM(p_search_term) = '' THEN
+        SET v_pattern = '%';
+    ELSE
+        SET v_pattern = CONCAT('%', TRIM(p_search_term), '%');
+    END IF;
+
+    SELECT
         c.id              AS ClientId,
         c.document_number AS DocumentNumber,
         c.business_name   AS BusinessName,
@@ -22,52 +31,87 @@ BEGIN
         a.status          AS Status,
         a.status_reason   AS StatusReason,
         a.updated_at      AS UpdatedAt
-    FROM dbo.Client c
-    LEFT JOIN dbo.Account a ON a.client_id = c.id
-    WHERE c.document_number LIKE '%' + @document_number + '%'
+    FROM Client c
+    LEFT JOIN Account a ON a.client_id = c.id
+    WHERE c.document_number LIKE v_pattern
+       OR c.business_name   LIKE v_pattern
     ORDER BY c.id, a.id;
-END
-GO
+END //
+DELIMITER ;
 
--- ---------- sp_update_account_status ----------
-CREATE OR ALTER PROCEDURE sp_update_account_status
-    @account_id    INT,
-    @status        VARCHAR(20),
-    @status_reason VARCHAR(500) = NULL
-AS
+-- ============================================
+-- sp_update_account_status
+-- Validates status and reason, updates account,
+-- and logs the change to AccountDetail
+-- ============================================
+DELIMITER //
+CREATE PROCEDURE sp_update_account_status(
+    IN p_account_id    INT,
+    IN p_status        VARCHAR(20),
+    IN p_status_reason VARCHAR(500),
+    IN p_changed_by    VARCHAR(100)
+)
 BEGIN
-    SET NOCOUNT ON;
+    DECLARE v_old_status  VARCHAR(20);
+    DECLARE v_account_count INT;
 
-    -- Validate status value
-    IF @status NOT IN ('ACTIVE', 'BLOCKED')
-    BEGIN
-        RAISERROR('Invalid status. Allowed values: ACTIVE, BLOCKED.', 16, 1);
-        RETURN;
-    END
+    -- 1. Validate status value
+    IF p_status NOT IN ('ACTIVE', 'BLOCKED') THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Invalid status. Allowed values: ACTIVE, BLOCKED.';
+    END IF;
 
-    -- Validate reason is required when blocking
-    IF @status = 'BLOCKED' AND (@status_reason IS NULL OR LTRIM(RTRIM(@status_reason)) = '')
-    BEGIN
-        RAISERROR('Reason is required when blocking an account.', 16, 1);
-        RETURN;
-    END
+    -- 2. Reason is required when blocking
+    IF p_status = 'BLOCKED' AND (p_status_reason IS NULL OR TRIM(p_status_reason) = '') THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Reason is required when blocking an account.';
+    END IF;
 
-    -- Check if account exists
-    IF NOT EXISTS (SELECT 1 FROM dbo.Account WHERE id = @account_id)
-    BEGIN
-        RAISERROR('Account not found.', 16, 1);
-        RETURN;
-    END
+    -- 3. Check if the account exists
+    SELECT COUNT(*) INTO v_account_count FROM Account WHERE id = p_account_id;
+    IF v_account_count = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Account not found.';
+    END IF;
 
-    -- Clear reason when activating
-    IF @status = 'ACTIVE'
-        SET @status_reason = NULL;
+    -- 4. If status is ACTIVE, clear the reason
+    IF p_status = 'ACTIVE' THEN
+        SET p_status_reason = NULL;
+    END IF;
 
-    -- Update the account
-    UPDATE dbo.Account
-    SET status = @status,
-        status_reason = @status_reason,
-        updated_at = GETDATE()
-    WHERE id = @account_id;
-END
-GO
+    -- 5. Capture current status
+    SELECT status INTO v_old_status FROM Account WHERE id = p_account_id;
+
+    -- 6. Update the account
+    UPDATE Account
+    SET status        = p_status,
+        status_reason = p_status_reason,
+        updated_at    = CURRENT_TIMESTAMP
+    WHERE id = p_account_id;
+
+    -- 7. Log the change
+    INSERT INTO AccountDetail (account_id, old_status, new_status, status_reason, changed_by)
+    VALUES (p_account_id, v_old_status, p_status, p_status_reason, p_changed_by);
+END //
+DELIMITER ;
+
+-- ============================================
+-- sp_get_account_status_history
+-- Returns the status change history for an account
+-- ============================================
+DELIMITER //
+CREATE PROCEDURE sp_get_account_status_history(IN p_account_id INT)
+BEGIN
+    SELECT
+        d.id            AS historyId,
+        d.account_id    AS accountId,
+        d.old_status    AS oldStatus,
+        d.new_status    AS newStatus,
+        d.status_reason AS statusReason,
+        d.changed_by    AS changedBy,
+        d.changed_at    AS changedAt
+    FROM AccountDetail d
+    WHERE d.account_id = p_account_id
+    ORDER BY d.changed_at DESC;
+END //
+DELIMITER ;
