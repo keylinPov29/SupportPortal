@@ -24,6 +24,16 @@ public class ClientRepository : IClientRepository
             new { p_search_term = documentNumber ?? "" },
             commandType: CommandType.StoredProcedure
         );
+        foreach (var client in clients)
+    {
+        if (client.UpdatedAt.HasValue)
+        {
+            client.UpdatedAt = DateTime.SpecifyKind(client.UpdatedAt.Value, DateTimeKind.Utc);
+        }
+    }
+
+    return clients;
+}
     }
 
     public async Task UpdateAccountStatusAsync(int accountId, string status, string? reason)
