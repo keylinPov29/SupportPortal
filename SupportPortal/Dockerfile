@@ -1,5 +1,15 @@
 # ============================================
-# Stage 1 — Build
+# Stage 1 — Build the React frontend
+# ============================================
+FROM node:20-alpine AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# ============================================
+# Stage 2 — Build the .NET backend
 # ============================================
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
@@ -11,12 +21,15 @@ RUN dotnet restore SupportPortal/SupportPortal.csproj
 # Copy the rest of the source code
 COPY SupportPortal/ ./SupportPortal/
 
+# Copy the React build output into wwwroot so .NET serves it as static files
+COPY --from=frontend-build /app/frontend/dist ./SupportPortal/wwwroot
+
 # Build and publish in Release mode
 WORKDIR /src/SupportPortal
 RUN dotnet publish -c Release -o /app/publish
 
 # ============================================
-# Stage 2 — Runtime
+# Stage 3 — Runtime
 # ============================================
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
