@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+using MySqlConnector;
 using Dapper;
 using SupportPortal.Models.Dtos;
 using System.Data;
@@ -19,21 +19,22 @@ public class ClientRepository : IClientRepository
     {
         using var connection = new MySqlConnection(_connectionString);
 
-        return await connection.QueryAsync<ClientDto>(
+        var clients = await connection.QueryAsync<ClientDto>(
             "sp_search_clients",
             new { p_search_term = documentNumber ?? "" },
             commandType: CommandType.StoredProcedure
         );
-        foreach (var client in clients)
-    {
-        if (client.UpdatedAt.HasValue)
-        {
-            client.UpdatedAt = DateTime.SpecifyKind(client.UpdatedAt.Value, DateTimeKind.Utc);
-        }
-    }
 
-    return clients;
-}
+        // Mark dates as UTC so the JSON includes the "Z" suffix
+        foreach (var client in clients)
+        {
+            if (client.UpdatedAt.HasValue)
+            {
+                client.UpdatedAt = DateTime.SpecifyKind(client.UpdatedAt.Value, DateTimeKind.Utc);
+            }
+        }
+
+        return clients;
     }
 
     public async Task UpdateAccountStatusAsync(int accountId, string status, string? reason)
