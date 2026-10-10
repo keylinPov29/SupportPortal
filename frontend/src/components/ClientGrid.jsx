@@ -39,13 +39,12 @@ function ClientGrid({ clients, selectedClientId, onSelectClient }) {
 
         const now = new Date();
         const diffMs = now - date;
-        const diffSecs = Math.floor(diffMs / 1000);
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
 
         // Live countdown: shows seconds changing every second
-        if (diffSecs < 60) return `Hace ${diffSecs}s`;
+        if (diffMins < 1) return 'Hace unos segundos';
         if (diffMins < 60) return `Hace ${diffMins} min`;
         if (diffHours < 24) return `Hace ${diffHours} h`;
         if (diffDays < 7) return `Hace ${diffDays} d`;
