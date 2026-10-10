@@ -98,9 +98,6 @@ function StatusModal({ account, clientName, onClose, onSave }) {
                     </label>
 
                     <label className="modal__field">
-                        <span className="modal__field-label">
-                            Motivo del bloqueo {isBlocking && <span className="required">*</span>}
-                        </span>
                         <p className="modal__field-hint">
                             Este motivo quedará registrado en <strong>status_reason</strong> para la trazabilidad del caso.
                         </p>
