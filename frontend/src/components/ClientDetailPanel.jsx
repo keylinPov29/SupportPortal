@@ -45,7 +45,6 @@ function ClientDetailPanel({ client, onManageAccount }) {
                     <h2 className="detail-panel__name">{client.businessName}</h2>
                     <span className="text-muted">RUT {client.documentNumber}</span>
                 </div>
-                <button className="detail-panel__more" type="button">⋯</button>
             </div>
 
             <div className="detail-panel__section">

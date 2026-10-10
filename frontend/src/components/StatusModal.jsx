@@ -98,9 +98,6 @@ function StatusModal({ account, clientName, onClose, onSave }) {
                     </label>
 
                     <label className="modal__field">
-                        <p className="modal__field-hint">
-                            Este motivo quedará registrado en <strong>status_reason</strong> para la trazabilidad del caso.
-                        </p>
                         <textarea
                             className="form-field__input"
                             rows={4}
