@@ -28,17 +28,19 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Enable Swagger in ALL environments (including production)
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-// Enable CORS — must be placed BEFORE UseAuthorization and MapControllers
 app.UseCors("AllowFrontend");
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+// SPA fallback — any non-API route returns index.html (for React Router)
+app.MapFallbackToFile("index.html");
 
 app.Run();
