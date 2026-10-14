@@ -11,9 +11,6 @@ function Sidebar() {
             <nav className="sidebar__nav">
                 <div className="sidebar__section-label">GESTIÓN</div>
                 <a className="sidebar__item sidebar__item--active" href="#"><span>🏢</span> Clientes</a>
-                <a className="sidebar__item" href="#"><span>👥</span> Usuarios</a>
-                <a className="sidebar__item" href="#"><span>📋</span> Solicitudes</a>
-                <a className="sidebar__item" href="#"><span>📊</span> Reportes</a>
             </nav>
             <div className="sidebar__footer">
                 <a className="sidebar__item" href="#"><span>❓</span> Centro de ayuda</a>
