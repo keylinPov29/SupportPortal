@@ -15,12 +15,6 @@ public class AccountsController : ControllerBase
         _service = service;
     }
 
-    /// <summary>
-    /// Update the status of an account.
-    /// </summary>
-    /// <param name="id">Account ID</param>
-    /// <param name="request">Status and optional reason</param>
-    /// <returns>Success message</returns>
     [HttpPut("{id}/status")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateAccountStatus request)
     {
@@ -30,6 +24,20 @@ public class AccountsController : ControllerBase
             return Ok(new { message = "Account status updated successfully." });
         }
         catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("{id}/history")]
+    public async Task<IActionResult> GetHistory(int id)
+    {
+        try
+        {
+            var history = await _service.GetAccountHistoryAsync(id);
+            return Ok(history);
+        }
+        catch (Exception ex)
         {
             return BadRequest(new { error = ex.Message });
         }

@@ -28,3 +28,12 @@ export async function updateAccountStatus(accountId, status, reason) {
 
     return response.json();
 }
+export async function getAccountHistory(accountId) {
+    const url = `${API_BASE_URL}/api/accounts/${accountId}/history`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error || `Request failed with status ${response.status}`);
+    }
+    return response.json();
+}

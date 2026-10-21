@@ -6,4 +6,5 @@ public interface IClientService
 {
     Task<IEnumerable<ClientDto>> SearchClientsAsync(string documentNumber);
     Task UpdateAccountStatusAsync(int accountId, UpdateAccountStatus request);
+    Task<IEnumerable<AccountHistoryDto>> GetAccountHistoryAsync(int accountId);
 }

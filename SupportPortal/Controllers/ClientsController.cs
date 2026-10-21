@@ -15,11 +15,7 @@ public class ClientsController : ControllerBase
         _service = service;
     }
 
-    /// <summary>
-    /// Search clients by document number.
-    /// </summary>
-    /// <param name="document">Document number (partial match)</param>
-    /// <returns>List of clients with their accounts</returns>
+   
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] string document = "")
     {

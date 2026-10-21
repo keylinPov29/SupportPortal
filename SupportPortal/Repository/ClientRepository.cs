@@ -53,4 +53,26 @@ public class ClientRepository : IClientRepository
             commandType: CommandType.StoredProcedure
         );
     }
+<<<<<<< Updated upstream
 }
+=======
+    public async Task<IEnumerable<AccountHistoryDto>> GetAccountHistoryAsync(int accountId)
+    {
+        using var connection = new MySqlConnection(_connectionString);
+
+        var history = await connection.QueryAsync<AccountHistoryDto>(
+            "sp_get_account_status_history",
+            new { p_account_id = accountId },
+            commandType: CommandType.StoredProcedure
+        );
+
+        // Mark dates as UTC
+        foreach (var record in history)
+        {
+            record.ChangedAt = DateTime.SpecifyKind(record.ChangedAt, DateTimeKind.Utc);
+        }
+
+        return history;
+    }
+}
+>>>>>>> Stashed changes

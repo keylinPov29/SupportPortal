@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react';
 
 function ClientGrid({ clients, selectedClientId, onSelectClient }) {
-    // Force re-render every second so "Hace Xs" updates live
-    const [, setTick] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+    const totalPages = Math.ceil(clients.length / itemsPerPage) || 1;
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            setTick((t) => t + 1);
-        }, 1000); // update every 1 second
+        setCurrentPage(1);
+    }, [clients.length]);
 
+    // Live timer: se actualiza cada segundo para que el tiempo corra
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(interval);
     }, []);
+
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentClients = clients.slice(indexOfFirstItem, indexOfLastItem);
 
     const getStatusClass = (status) => {
         if (status === 'ACTIVE') return 'status-chip--active';
@@ -18,8 +26,8 @@ function ClientGrid({ clients, selectedClientId, onSelectClient }) {
         return 'status-chip--inactive';
     };
     const getStatusLabel = (status) => {
-        if (status === 'ACTIVE') return 'Activa';
-        if (status === 'BLOCKED') return 'Bloqueada';
+        if (status === 'ACTIVE') return 'Active';
+        if (status === 'BLOCKED') return 'Blocked';
         return status;
     };
     const getDotClass = (status) => {
@@ -27,34 +35,36 @@ function ClientGrid({ clients, selectedClientId, onSelectClient }) {
         if (status === 'BLOCKED') return 'status-dot--blocked';
         return 'status-dot--inactive';
     };
-
     const getInitials = (name) =>
         name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
-    // Format the updatedAt timestamp nicely — updates every second
-    const formatActivity = (isoDate) => {
-        if (!isoDate) return 'Sin fecha registrada';
-        const date = new Date(isoDate);
-        if (isNaN(date.getTime())) return 'Fecha inválida';
+    // Función para obtener el texto de la actividad con el ajuste de -5 horas
+    const getActivityText = (isoDate) => {
+        if (!isoDate) return 'No date';
 
-        const now = new Date();
-        const diffMs = now - date;
+        let dateStr = isoDate;
+        // 1. Aseguramos que la fecha se lea como UTC
+        if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
+            dateStr = dateStr + 'Z';
+        }
+
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return 'Invalid date';
+
+        // 2. Ajuste de zona horaria: restamos 5 horas (Perú)
+        const dateAdjusted = new Date(date.getTime() - (5 * 60 * 60 * 1000));
+
+        const diffMs = Math.max(0, now - dateAdjusted.getTime());
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
 
-        // Live countdown: shows seconds changing every second
-        if (diffMins < 1) return 'Hace unos segundos';
-        if (diffMins < 60) return `Hace ${diffMins} min`;
-        if (diffHours < 24) return `Hace ${diffHours} h`;
-        if (diffDays < 7) return `Hace ${diffDays} d`;
-
-        // Otherwise show the full date
-        return date.toLocaleDateString('es-PE', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        });
+        if (diffMins < 1) return 'A few seconds ago';
+        if (diffMins < 60) return `${diffMins} min ago`;
+        if (diffHours < 24) return `${diffHours} h ago`;
+        if (diffDays < 7) return `${diffDays} d ago`;
+        
+        return dateAdjusted.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
     return (
@@ -62,15 +72,15 @@ function ClientGrid({ clients, selectedClientId, onSelectClient }) {
             <table className="client-grid">
                 <thead>
                     <tr>
-                        <th>RUC / Documento</th>
-                        <th>Empresa</th>
-                        <th>Cuenta</th>
-                        <th>Estado</th>
-                        <th>Actividad</th>
+                        <th>RUC / Document</th>
+                        <th>Company</th>
+                        <th>Account</th>
+                        <th>Status</th>
+                        <th>Activity</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {clients.map((client) => {
+                    {currentClients.map((client) => {
                         const firstAccount = client.accounts[0];
                         const isSelected = selectedClientId === client.clientId;
                         return (
@@ -78,6 +88,7 @@ function ClientGrid({ clients, selectedClientId, onSelectClient }) {
                                 key={client.clientId}
                                 className={isSelected ? 'selected' : ''}
                                 onClick={() => onSelectClient(client.clientId)}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <td>
                                     <div className="client-grid__doc">
@@ -94,10 +105,10 @@ function ClientGrid({ clients, selectedClientId, onSelectClient }) {
                                     {firstAccount ? (
                                         <div className="client-grid__account">
                                             <strong>{firstAccount.accountNumber}</strong>
-                                            <span className="text-muted">Cuenta empresarial</span>
+                                            <span className="text-muted">Business account</span>
                                         </div>
                                     ) : (
-                                        <span className="text-muted">Sin cuentas</span>
+                                        <span className="text-muted">No accounts</span>
                                     )}
                                 </td>
                                 <td>
@@ -111,13 +122,41 @@ function ClientGrid({ clients, selectedClientId, onSelectClient }) {
                                     )}
                                 </td>
                                 <td className="text-muted">
-                                    {firstAccount ? formatActivity(firstAccount.updatedAt) : '—'}
+                                    {firstAccount ? getActivityText(firstAccount.updatedAt) : '—'}
                                 </td>
                             </tr>
                         );
                     })}
                 </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            <div className="pagination-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '0 16px' }}>
+                <span className="text-muted" style={{ fontSize: '14px' }}>
+                    Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, clients.length)} of {clients.length} clients
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        className="btn btn--outline"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        style={{ padding: '6px 12px', fontSize: '14px' }}
+                    >
+                        Previous
+                    </button>
+                    <span style={{ display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: '14px', fontWeight: 'bold' }}>
+                        {currentPage} / {totalPages}
+                    </span>
+                    <button
+                        className="btn btn--outline"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        style={{ padding: '6px 12px', fontSize: '14px' }}
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

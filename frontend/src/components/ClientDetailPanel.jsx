@@ -1,4 +1,10 @@
+import { useState } from 'react';
+import HistoryModal from './HistoryModal';
+
 function ClientDetailPanel({ client, onManageAccount }) {
+    // Estado para controlar qué cuenta se está mirando en el historial
+    const [historyAccount, setHistoryAccount] = useState(null);
+
     const getStatusClass = (status) => {
         if (status === 'ACTIVE') return 'status-chip--active';
         if (status === 'BLOCKED') return 'status-chip--blocked';
@@ -43,7 +49,7 @@ function ClientDetailPanel({ client, onManageAccount }) {
                 <div className="detail-panel__avatar">{getInitials(client.businessName)}</div>
                 <div className="detail-panel__info">
                     <h2 className="detail-panel__name">{client.businessName}</h2>
-                    <span className="text-muted">RUT {client.documentNumber}</span>
+                    <span className="text-muted">RUC {client.documentNumber}</span>
                 </div>
             </div>
 
@@ -81,17 +87,37 @@ function ClientDetailPanel({ client, onManageAccount }) {
                                 <div className="text-muted account-card__label">ÚLTIMA ACTUALIZACIÓN</div>
                                 <strong>{formatDate(account.updatedAt)}</strong>
                             </div>
-                            <button
-                                type="button"
-                                className="btn btn--outline"
-                                onClick={() => onManageAccount(account)}
-                            >
-                                Cambiar estado
-                            </button>
+
+                            {/* 👇 Aquí agrupamos los dos botones */}
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn--outline"
+                                    onClick={() => setHistoryAccount(account)}
+                                    style={{ padding: '6px 10px', fontSize: '12px' }}
+                                >
+                                    Historial
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn--outline"
+                                    onClick={() => onManageAccount(account)}
+                                >
+                                    Cambiar estado
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
+
+            {/* 👇 Aquí renderizamos el modal si hay una cuenta seleccionada */}
+            {historyAccount && (
+                <HistoryModal
+                    account={historyAccount}
+                    onClose={() => setHistoryAccount(null)}
+                />
+            )}
         </aside>
     );
 }

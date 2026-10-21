@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { searchClients, updateAccountStatus } from './services/api';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import KpiCards from './components/KpiCards';           // 🆕
+import KpiCards from './components/KpiCards';
 import ClientGrid from './components/ClientGrid';
 import ClientDetailPanel from './components/ClientDetailPanel';
 import StatusModal from './components/StatusModal';
@@ -15,6 +15,13 @@ function App() {
     const [error, setError] = useState(null);
     const [selectedClientId, setSelectedClientId] = useState(null);
     const [modalAccount, setModalAccount] = useState(null);
+
+    // 👇 NUEVO: Estado para forzar el re-renderizado cada segundo
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const timer = setInterval(() => setTick((t) => t + 1), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         loadClients('');
@@ -98,19 +105,19 @@ function App() {
             <main className="main">
                 <Header />
                 <div className="content">
-                    <h1>Clientes corporativos</h1>
+                    {/* 👇 Textos traducidos al inglés */}
+                    <h1>Corporate Clients</h1>
                     <p className="content__subtitle">
-                        Busca clientes y administra el estado operativo de sus cuentas.
+                        Search for clients and manage the operational status of their accounts.
                     </p>
 
-                    {/* 🆕 KPI Cards — dynamically calculated */}
                     <KpiCards clients={groupedClients} />
 
                     <div className="search-bar">
                         <input
                             type="text"
                             className="search-bar__input"
-                            placeholder="Buscar por empresa o RUC...."
+                            placeholder="Search by company or document number..."
                             onChange={(e) => setDocument(e.target.value)}
                         />
                         {loading && <span className="search-bar__spinner">⏳</span>}
@@ -135,7 +142,7 @@ function App() {
 
                     {!loading && !error && groupedClients.length === 0 && (
                         <div className="placeholder">
-                            No se encontraron clientes con ese criterio de búsqueda.
+                            No clients found matching your search criteria.
                         </div>
                     )}
                 </div>

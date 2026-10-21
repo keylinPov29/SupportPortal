@@ -6,5 +6,6 @@ namespace SupportPortal.Repositories
     {
         Task<IEnumerable<ClientDto>> SearchClientsAsync(string documentNumber);
         Task UpdateAccountStatusAsync(int accountId, string status, string? reason);
+        Task<IEnumerable<AccountHistoryDto>> GetAccountHistoryAsync(int accountId);
     }
 }

@@ -18,7 +18,6 @@ public class ClientService : IClientService
     {
         try
         {
-            // Allow empty search to return all records
             var term = (documentNumber ?? "").Trim();
             _logger.LogInformation("Searching clients with term: {Term}", term);
             return await _repository.SearchClientsAsync(term);
@@ -52,7 +51,6 @@ public class ClientService : IClientService
         }
         catch (ArgumentException)
         {
-            // Re-throw business validation errors
             throw;
         }
         catch (Exception ex)
@@ -60,7 +58,20 @@ public class ClientService : IClientService
             _logger.LogError(ex,
                 "Unexpected error updating account {AccountId} to status {Status}",
                 accountId, request.Status);
-            throw; // Re-throw for the global middleware
+            throw; 
+        }
+    }
+    public async Task<IEnumerable<AccountHistoryDto>> GetAccountHistoryAsync(int accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching history for account {AccountId}", accountId);
+            return await _repository.GetAccountHistoryAsync(accountId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching history for account {AccountId}", accountId);
+            throw;
         }
     }
 }
