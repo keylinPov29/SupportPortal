@@ -9,12 +9,12 @@ function StatusModal({ account, clientName, onClose, onSave }) {
     const isBlocking = status === 'BLOCKED';
     const maxLength = 500;
 
-    // Check if there are unsaved changes
+    // Comprobar si hay cambios
     const hasChanges =
         status !== account.status ||
         reason.trim() !== (account.statusReason || '').trim();
 
-    // Close with ESC key
+    // Cerrar con ESC
     useEffect(() => {
         const handleEsc = (e) => {
             if (e.key === 'Escape') onClose();
@@ -23,7 +23,6 @@ function StatusModal({ account, clientName, onClose, onSave }) {
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onClose]);
 
-    // Close only if there are no unsaved changes
     const handleOverlayClick = (e) => {
         if (e.target === e.currentTarget && !hasChanges) {
             onClose();
@@ -46,7 +45,8 @@ function StatusModal({ account, clientName, onClose, onSave }) {
 
         setSaving(true);
         try {
-            await onSave(account.accountId, status, reason);
+            // Si no está bloqueando, enviamos el motivo como null
+            await onSave(account.accountId, status, isBlocking ? reason : null);
         } catch (err) {
             setLocalError(err.message);
         } finally {
@@ -90,27 +90,35 @@ function StatusModal({ account, clientName, onClose, onSave }) {
                         <select
                             className="form-field__input"
                             value={status}
-                            onChange={(e) => setStatus(e.target.value)}
+                            onChange={(e) => {
+                                const newStatus = e.target.value;
+                                setStatus(newStatus);
+                                // Si cambia a Activa, limpiamos el motivo
+                                if (newStatus === 'ACTIVE') setReason('');
+                            }}
                         >
                             <option value="ACTIVE">Activa</option>
                             <option value="BLOCKED">Bloqueada por fraude</option>
                         </select>
                     </label>
 
-                    <label className="modal__field">
-                        <textarea
-                            className="form-field__input"
-                            rows={4}
-                            placeholder="Ej. Bloqueo preventivo solicitado por el área de fraude…"
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value.slice(0, maxLength))}
-                            required={isBlocking}
-                        />
-                        <div className="modal__counter">
-                            <span className="text-muted">Campo obligatorio para bloquear</span>
-                            <span className="text-muted">{reason.length}/{maxLength}</span>
-                        </div>
-                    </label>
+                    {/* 👇 AQUÍ ESTÁ EL CAMBIO: Solo mostramos el textarea si es BLOCKED */}
+                    {isBlocking && (
+                        <label className="modal__field">
+                            <textarea
+                                className="form-field__input"
+                                rows={4}
+                                placeholder="Ej. Bloqueo preventivo solicitado por el área de fraude…"
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value.slice(0, maxLength))}
+                                required={isBlocking}
+                            />
+                            <div className="modal__counter">
+                                <span className="text-muted">Campo obligatorio para bloquear</span>
+                                <span className="text-muted">{reason.length}/{maxLength}</span>
+                            </div>
+                        </label>
+                    )}
 
                     {isBlocking && (
                         <div className="modal__warning">
@@ -145,7 +153,6 @@ function StatusModal({ account, clientName, onClose, onSave }) {
     );
 }
 
-// Helper functions for status chips
 function getStatusClass(status) {
     if (status === 'ACTIVE') return 'status-chip--active';
     if (status === 'BLOCKED') return 'status-chip--blocked';

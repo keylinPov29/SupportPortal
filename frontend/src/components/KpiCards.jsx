@@ -1,15 +1,20 @@
-function KpiCards({ clients }) {
-    // Calculate KPIs from the grouped clients
+function KpiCards({ clients, onFilter, activeFilter }) {
     const allAccounts = clients.flatMap((c) => c.accounts);
     const totalClients = clients.length;
     const totalAccounts = allAccounts.length;
     const activeAccounts = allAccounts.filter((a) => a.status === 'ACTIVE').length;
     const blockedAccounts = allAccounts.filter((a) => a.status === 'BLOCKED').length;
 
+    const getCardStyle = (filterName) => ({
+        cursor: 'pointer',
+        border: activeFilter === filterName ? '2px solid #2563eb' : '2px solid transparent',
+        transition: 'all 0.2s ease-in-out',
+        transform: activeFilter === filterName ? 'translateY(-2px)' : 'none',
+    });
+
     return (
         <div className="kpi-grid">
-            {/* KPI 1 — Registered clients */}
-            <div className="kpi-card">
+            <div className="kpi-card" onClick={() => onFilter('ALL')} style={getCardStyle('ALL')}>
                 <div className="kpi-card__header">
                     <span className="kpi-card__label">Clientes registrados</span>
                     <span className="kpi-card__dot kpi-card__dot--green"></span>
@@ -22,8 +27,7 @@ function KpiCards({ clients }) {
                 </div>
             </div>
 
-            {/* KPI 2 — Active accounts */}
-            <div className="kpi-card">
+            <div className="kpi-card" onClick={() => onFilter('ACTIVE')} style={getCardStyle('ACTIVE')}>
                 <div className="kpi-card__header">
                     <span className="kpi-card__label">Cuentas activas</span>
                     <span className="kpi-card__dot kpi-card__dot--yellow"></span>
@@ -36,8 +40,7 @@ function KpiCards({ clients }) {
                 </div>
             </div>
 
-            {/* KPI 3 — Blocked accounts */}
-            <div className="kpi-card">
+            <div className="kpi-card" onClick={() => onFilter('BLOCKED')} style={getCardStyle('BLOCKED')}>
                 <div className="kpi-card__header">
                     <span className="kpi-card__label">Cuentas bloqueadas</span>
                     <span className="kpi-card__dot kpi-card__dot--red"></span>

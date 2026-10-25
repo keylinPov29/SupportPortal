@@ -15,8 +15,8 @@ function App() {
     const [error, setError] = useState(null);
     const [selectedClientId, setSelectedClientId] = useState(null);
     const [modalAccount, setModalAccount] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('ALL');
 
-    // 👇 NUEVO: Estado para forzar el re-renderizado cada segundo
     const [, setTick] = useState(0);
     useEffect(() => {
         const timer = setInterval(() => setTick((t) => t + 1), 1000);
@@ -42,16 +42,6 @@ function App() {
         try {
             const data = await searchClients(searchTerm);
             setRows(data);
-
-            if (data.length > 0) {
-                const grouped = groupByClient(data);
-                setSelectedClientId((prev) => {
-                    const stillExists = prev && grouped.find((c) => c.clientId === prev);
-                    return stillExists ? prev : grouped[0].clientId;
-                });
-            } else {
-                setSelectedClientId(null);
-            }
         } catch (err) {
             setError(err.message);
             setRows([]);
@@ -86,6 +76,25 @@ function App() {
     };
 
     const groupedClients = useMemo(() => groupByClient(rows), [rows]);
+
+    const displayData = useMemo(() => {
+        if (statusFilter === 'ALL') return groupedClients;
+        return rows
+            .filter((row) => row.status === statusFilter && row.accountId)
+            .map((row) => ({
+                clientId: row.clientId,
+                documentNumber: row.documentNumber,
+                businessName: row.businessName,
+                accounts: [{
+                    accountId: row.accountId,
+                    accountNumber: row.accountNumber,
+                    status: row.status,
+                    statusReason: row.statusReason,
+                    updatedAt: row.updatedAt,
+                }]
+            }));
+    }, [groupedClients, rows, statusFilter]);
+
     const selectedClient = groupedClients.find((c) => c.clientId === selectedClientId) || null;
 
     const handleStatusSave = async (accountId, status, reason) => {
@@ -105,19 +114,22 @@ function App() {
             <main className="main">
                 <Header />
                 <div className="content">
-                    {/* 👇 Textos traducidos al inglés */}
-                    <h1>Corporate Clients</h1>
+                    <h1>Clientes corporativos</h1>
                     <p className="content__subtitle">
-                        Search for clients and manage the operational status of their accounts.
+                        Busca clientes y administra el estado operativo de sus cuentas.
                     </p>
 
-                    <KpiCards clients={groupedClients} />
+                    <KpiCards
+                        clients={groupedClients}
+                        onFilter={setStatusFilter}
+                        activeFilter={statusFilter}
+                    />
 
                     <div className="search-bar">
                         <input
                             type="text"
                             className="search-bar__input"
-                            placeholder="Search by company or document number..."
+                            placeholder="Buscar por empresa o RUC..."
                             onChange={(e) => setDocument(e.target.value)}
                         />
                         {loading && <span className="search-bar__spinner">⏳</span>}
@@ -125,24 +137,36 @@ function App() {
 
                     {error && <div className="error-box">{error}</div>}
 
-                    {!loading && groupedClients.length > 0 && (
-                        <div className="grid-layout">
+                    {!loading && displayData.length > 0 && (
+                        <div
+                            className="grid-layout"
+                            /* 👇 MAGIA: Si no hay cliente seleccionado o estamos filtrando, la tabla ocupa todo (1fr). 
+                               Si hay cliente, se divide en 2fr (tabla) y 1fr (panel). */
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: (statusFilter === 'ALL' && selectedClient) ? '2fr 1fr' : '1fr',
+                                gap: '24px'
+                            }}
+                        >
                             <ClientGrid
-                                clients={groupedClients}
+                                clients={displayData}
+                                isFiltered={statusFilter !== 'ALL'}
                                 selectedClientId={selectedClientId}
                                 onSelectClient={setSelectedClientId}
                             />
 
-                            <ClientDetailPanel
-                                client={selectedClient}
-                                onManageAccount={setModalAccount}
-                            />
+                            {statusFilter === 'ALL' && selectedClient && (
+                                <ClientDetailPanel
+                                    client={selectedClient}
+                                    onManageAccount={setModalAccount}
+                                />
+                            )}
                         </div>
                     )}
 
-                    {!loading && !error && groupedClients.length === 0 && (
+                    {!loading && !error && displayData.length === 0 && (
                         <div className="placeholder">
-                            No clients found matching your search criteria.
+                            No se encontraron registros con ese criterio de búsqueda.
                         </div>
                     )}
                 </div>
