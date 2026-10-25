@@ -1,7 +1,5 @@
 **/bin/
 **/obj/
-**/node_modules/
-**/dist/
 **/.vs/
 **/.vscode/
 **/.idea/
