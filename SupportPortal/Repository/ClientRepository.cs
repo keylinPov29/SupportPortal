@@ -53,9 +53,7 @@ public class ClientRepository : IClientRepository
             commandType: CommandType.StoredProcedure
         );
     }
-<<<<<<< Updated upstream
-}
-=======
+
     public async Task<IEnumerable<AccountHistoryDto>> GetAccountHistoryAsync(int accountId)
     {
         using var connection = new MySqlConnection(_connectionString);
@@ -75,4 +73,3 @@ public class ClientRepository : IClientRepository
         return history;
     }
 }
->>>>>>> Stashed changes
